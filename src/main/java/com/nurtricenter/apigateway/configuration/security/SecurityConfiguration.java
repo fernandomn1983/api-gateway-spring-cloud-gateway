@@ -1,5 +1,7 @@
-package com.nurtricenter.apigateway.configuration;
+package com.nurtricenter.apigateway.configuration.security;
 
+import com.nurtricenter.apigateway._shared.constant.CommonConstant;
+import com.nurtricenter.apigateway.security.value.SecurityValue;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,10 +19,14 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
+import static com.nurtricenter.apigateway.configuration.security.SecurityConstant.*;
+
 @Configuration
 @EnableWebFluxSecurity
 @RequiredArgsConstructor
 public class SecurityConfiguration {
+
+    private final SecurityValue securityValue;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -44,13 +50,8 @@ public class SecurityConfiguration {
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeExchange(exchanges -> exchanges
-                        .pathMatchers(
-                                "/auth/**",
-                                "/public/**",
-                                "/actuator/health",
-                                "/actuator/info",
-                                "/fallback/**"
-                        ).permitAll()
+                        .pathMatchers(securityValue.getPublicList())
+                        .permitAll()
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {
                 }))
@@ -60,24 +61,20 @@ public class SecurityConfiguration {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
-        corsConfiguration.setAllowedOrigins(List.of(
-                "http://localhost:9000",
-                "https://127.0.0.1:3000"
-        ));
-
-        corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        corsConfiguration.setAllowedHeaders(List.of("*"));
+        corsConfiguration.setAllowedOrigins(securityValue.getCorsAllowedOrigins());
+        corsConfiguration.setAllowedMethods(List.of(GET_METHOD, POST_METHOD, PUT_METHOD, DELETE_METHOD, OPTIONS_METHOD));
+        corsConfiguration.setAllowedHeaders(List.of(ANY_HEADER));
         corsConfiguration.setAllowCredentials(true);
         corsConfiguration.setExposedHeaders(List.of(
-                "X-Request-Id",
-                "X-Rate-Limit-Limit",
-                "X-Rate-Limit-Remaining",
-                "Authorization"
+                CommonConstant.X_REQUEST_ID_HEADER,
+                CommonConstant.X_RATE_LIMIT_LIMIT_HEADER,
+                CommonConstant.X_RATE_LIMIT_REMAINING_HEADER,
+                AUTHORIZATION_HEADER
         ));
-        corsConfiguration.setMaxAge(3600L);
+        corsConfiguration.setMaxAge(ONE_HOUR);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", corsConfiguration);
+        source.registerCorsConfiguration(ANY_PATH_WILDCARD, corsConfiguration);
 
         return source;
     }

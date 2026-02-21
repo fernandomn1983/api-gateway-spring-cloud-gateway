@@ -1,4 +1,4 @@
-package com.nurtricenter.apigateway.configuration;
+package com.nurtricenter.apigateway.configuration.errorhandler;
 
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
 import org.springframework.cloud.gateway.support.NotFoundException;
@@ -15,10 +15,11 @@ import reactor.core.publisher.Mono;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 
-@Configuration
-@Order(-1)
-public class GlobalErrorHandlerConfiguration implements ErrorWebExceptionHandler {
+import static com.nurtricenter.apigateway.configuration.errorhandler.GlobalErrorHandlerConstant.*;
 
+@Configuration
+@Order(GLOBAL_ERROR_HANDLER_ORDER)
+public class GlobalErrorHandlerConfiguration implements ErrorWebExceptionHandler {
 
     @Override
     public Mono<Void> handle(ServerWebExchange exchange, Throwable ex) {
@@ -33,7 +34,7 @@ public class GlobalErrorHandlerConfiguration implements ErrorWebExceptionHandler
         if (ex instanceof NotFoundException) {
             response.setStatusCode(HttpStatus.NOT_FOUND);
 
-            return handleError(response, "Not Found", "The requested resource was not found.");
+            return handleError(response, NOT_FOUND_ERROR, REQUESTED_RESOURCE_NOT_FOUND_MSG);
         } else if (ex instanceof ResponseStatusException responseStatusException) {
             response.setStatusCode(responseStatusException.getStatusCode());
 
@@ -41,17 +42,11 @@ public class GlobalErrorHandlerConfiguration implements ErrorWebExceptionHandler
         }
 
         response.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR);
-        return handleError(response, "Internal Server Error", "An unexpected error occurred.");
+        return handleError(response, INTERNAL_SERVER_ERROR, UNEXPECTED_ERROR_OCCURRED_MSG);
     }
 
     private Mono<Void> handleError(ServerHttpResponse response, String error, String message) {
-        String body = """
-                {
-                    "error": "%s",
-                    "message": "%s",
-                    "timestamp": "%s"
-                }
-                """.formatted(error, message, LocalDateTime.now());
+        String body = ERROR_MESSAGE_FORMAT.formatted(error, message, LocalDateTime.now());
 
         return writeResponse(response, body);
     }

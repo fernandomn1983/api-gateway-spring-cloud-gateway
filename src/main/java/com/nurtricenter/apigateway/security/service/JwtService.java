@@ -1,5 +1,6 @@
 package com.nurtricenter.apigateway.security.service;
 
+import com.nurtricenter.apigateway._shared.constant.CommonConstant;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -34,15 +35,15 @@ public class JwtService {
 
         String roles = userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.joining(","));
+                .collect(Collectors.joining(CommonConstant.COMMA));
 
-        claims.put("roles", roles);
+        claims.put(CommonConstant.ROLES_KEY, roles);
 
         if (userDetails instanceof UserDetailsImpl) {
             UserDetailsImpl userDetailsImpl = (UserDetailsImpl) userDetails;
 
-            claims.put("email", userDetailsImpl.getEmail());
-            claims.put("name", userDetailsImpl.getName());
+            claims.put(CommonConstant.EMAIL_KEY, userDetailsImpl.getEmail());
+            claims.put(CommonConstant.NAME_KEY, userDetailsImpl.getName());
         }
 
         return createToken(claims, userDetails.getUsername());
@@ -64,12 +65,6 @@ public class JwtService {
         } catch (Exception e) {
             return false;
         }
-    }
-
-    public Boolean validateToken(String token, UserDetails userDetails) {
-        final String username = extractUsername(token);
-
-        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
 
     public String extractUsername(String token) {

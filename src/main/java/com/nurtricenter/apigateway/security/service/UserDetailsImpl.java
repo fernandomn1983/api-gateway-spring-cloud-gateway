@@ -1,5 +1,6 @@
 package com.nurtricenter.apigateway.security.service;
 
+import com.nurtricenter.apigateway._shared.constant.CommonConstant;
 import com.nurtricenter.apigateway.security.dto.UserDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
@@ -17,7 +18,7 @@ public class UserDetailsImpl implements UserDetails {
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return user.getRoles().stream()
-                .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                .map(role -> new SimpleGrantedAuthority(CommonConstant.ROLE_PREFIX + role))
                 .collect(Collectors.toList());
     }
 
