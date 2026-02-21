@@ -1,5 +1,6 @@
 package com.nurtricenter.apigateway.security.controller;
 
+import com.nurtricenter.apigateway._shared.constant.CommonConstant;
 import com.nurtricenter.apigateway.security.dto.AuthRequestDto;
 import com.nurtricenter.apigateway.security.dto.AuthResponseDto;
 import com.nurtricenter.apigateway.security.service.JwtService;
@@ -20,6 +21,8 @@ import reactor.core.publisher.Mono;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.nurtricenter.apigateway.security.constant.AuthenticationConstant.*;
+
 @RestController
 @RequestMapping("/auth")
 @Slf4j
@@ -32,7 +35,7 @@ public class AuthenticationController {
 
     @PostMapping("/login")
     public Mono<ResponseEntity<AuthResponseDto>> login(@RequestBody AuthRequestDto request) {
-        log.info("Login attempt for user: {}", request.getUsername());
+        log.info(AUTHENTICATION_ATTEMPT_USER_LOG, request.getUsername());
 
         return authenticationManager.authenticate(
                         new UsernamePasswordAuthenticationToken(
@@ -41,24 +44,24 @@ public class AuthenticationController {
                         )
                 )
                 .flatMap(authentication -> {
-                    log.info("Authentication successful for user: {}", request.getUsername());
+                    log.info(AUTHENTICATION_SUCCESSFUL_USER_LOG, request.getUsername());
 
                     return userDetailsService.findByUsername(request.getUsername())
                             .map(userDetails -> {
                                 String token = jwtService.generateToken(userDetails);
 
                                 Map<String, Object> userInfo = new HashMap<>();
-                                userInfo.put("username", userDetails.getUsername());
-                                userInfo.put("roles", userDetails.getAuthorities());
+                                userInfo.put(USERNAME_KEY, userDetails.getUsername());
+                                userInfo.put(CommonConstant.ROLES_KEY, userDetails.getAuthorities());
 
                                 if (userDetails instanceof UserDetailsImpl userDetailsImpl) {
-                                    userInfo.put("email", userDetailsImpl.getEmail());
-                                    userInfo.put("name", userDetailsImpl.getName());
+                                    userInfo.put(CommonConstant.EMAIL_KEY, userDetailsImpl.getEmail());
+                                    userInfo.put(CommonConstant.NAME_KEY, userDetailsImpl.getName());
                                 }
 
                                 AuthResponseDto responseDto = AuthResponseDto.builder()
                                         .token(token)
-                                        .type("Bearer")
+                                        .type(BEARER_TYPE)
                                         .expiresIn(jwtService.extractExpiration(token).getTime())
                                         .userInfo(userInfo)
                                         .build();
@@ -67,10 +70,10 @@ public class AuthenticationController {
                             });
                 })
                 .onErrorResume(e -> {
-                    log.error("Login failed for user: {}: {}", request.getUsername(), e.getMessage());
+                    log.error(AUTHENTICATION_FAILED_USER_ERROR_LOG, request.getUsername(), e.getMessage());
                     return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                             .body(AuthResponseDto.builder()
-                                    .error("Invalid username and/or password")
+                                    .error(INVALID_USERNAME_PASSWORD_MSG)
                                     .build()));
                 });
 

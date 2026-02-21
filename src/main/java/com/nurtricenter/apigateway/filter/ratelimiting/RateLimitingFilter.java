@@ -1,5 +1,6 @@
-package com.nurtricenter.apigateway.filter;
+package com.nurtricenter.apigateway.filter.ratelimiting;
 
+import com.nurtricenter.apigateway._shared.constant.CommonConstant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -13,12 +14,11 @@ import reactor.core.publisher.Mono;
 import java.time.Duration;
 import java.util.Objects;
 
+import static com.nurtricenter.apigateway.filter.ratelimiting.RateLimitingConstant.*;
+
 @Component
 @RequiredArgsConstructor
 public class RateLimitingFilter implements GlobalFilter, Ordered {
-
-    private static final int MAX_REQUESTS_PER_MINUTE = 60;
-    private static final String RATE_LIMIT_KEY = "rate_limit";
 
     private final ReactiveRedisTemplate<String, String> reactiveRedisTemplate;
 
@@ -34,7 +34,7 @@ public class RateLimitingFilter implements GlobalFilter, Ordered {
         return reactiveRedisTemplate.opsForValue()
                 .increment(key)
                 .flatMap(count -> {
-                    if (count == 1) {
+                    if (count == ONE) {
                         return reactiveRedisTemplate.expire(key, Duration.ofMinutes(1)).thenReturn(count);
                     }
                     return Mono.just(count);
@@ -42,10 +42,10 @@ public class RateLimitingFilter implements GlobalFilter, Ordered {
                 .flatMap(count -> {
                     exchange.getResponse()
                             .getHeaders()
-                            .add("X-Rate-Limit-Limit", String.valueOf(MAX_REQUESTS_PER_MINUTE));
+                            .add(CommonConstant.X_RATE_LIMIT_LIMIT_HEADER, String.valueOf(MAX_REQUESTS_PER_MINUTE));
                     exchange.getResponse()
                             .getHeaders()
-                            .add("X-Rate-Limit-Remaining", String.valueOf(Math.max(0, MAX_REQUESTS_PER_MINUTE - count)));
+                            .add(CommonConstant.X_RATE_LIMIT_REMAINING_HEADER, String.valueOf(Math.max(0, MAX_REQUESTS_PER_MINUTE - count)));
 
                     if (count > MAX_REQUESTS_PER_MINUTE) {
                         exchange.getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
@@ -59,7 +59,7 @@ public class RateLimitingFilter implements GlobalFilter, Ordered {
 
     @Override
     public int getOrder() {
-        return Ordered.HIGHEST_PRECEDENCE + 1;
+        return Ordered.HIGHEST_PRECEDENCE + FIRST_PLACE;
     }
 
 }

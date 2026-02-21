@@ -1,16 +1,25 @@
 server:
   port: 9000
 
+security:
+  cors-allowed-origins:
+    - "http://localhost:9000"
+    - "https://127.0.0.1:3000"
+  public-list:
+    - "/auth/**"
+    - "/public/**"
+    - "/actuator/health"
+    - "/actuator/info"
+    - "/fallback/**"
+
 spring:
   application:
     name: api-gateway
-
   security:
     oauth2:
       resourceserver:
         jwt:
           secret: mySuperSecretKeyForJwtGenerationThatIsAtLeast32CharactersLong!
-
   cloud:
     gateway:
       routes:
@@ -20,7 +29,6 @@ spring:
             - Path=/auth/**
           filters:
             - StripPrefix=0
-
         - id: posts-services
           uri: https://jsonplaceholder.typicode.com
           predicates:
@@ -31,7 +39,6 @@ spring:
               args:
                 name: externalService
                 fallbackUri: forward:/fallback/external
-
         - id: users-services
           uri: https://jsonplaceholder.typicode.com
           predicates:
@@ -43,7 +50,6 @@ spring:
               args:
                 name: externalService
                 fallbackUri: forward:/fallback/external
-
         - id: external-fallback
           uri: forward:/fallback/external
           predicates:
@@ -51,23 +57,10 @@ spring:
           filters:
             - SetStatus=503
             - AddResponseHeader=X-Fallback, "true"
-
-      globalcors:
-        cors-configurations:
-          '[/api/**]':
-            allowed-origins:
-              - "http://localhost:9000"
-            allowed-methods:
-              - GET
-            allowed-headers: "*"
-            allow-credentials: true
-            max-age: 3600
-
       discovery:
         locator:
           enabled: true
           lower-case-service-id: true
-
   data:
     redis:
       host: localhost

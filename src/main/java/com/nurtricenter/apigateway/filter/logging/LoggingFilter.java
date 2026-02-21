@@ -1,5 +1,6 @@
-package com.nurtricenter.apigateway.filter;
+package com.nurtricenter.apigateway.filter.logging;
 
+import com.nurtricenter.apigateway._shared.constant.CommonConstant;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -13,11 +14,12 @@ import reactor.core.publisher.Mono;
 
 import java.util.UUID;
 
+import static com.nurtricenter.apigateway.filter.logging.LoggingConstant.*;
+
 @Component
 @Slf4j
-@Order(Ordered.HIGHEST_PRECEDENCE + 2)
+@Order(Ordered.HIGHEST_PRECEDENCE + SECOND_PLACE)
 public class LoggingFilter implements GlobalFilter, Ordered {
-
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
@@ -25,21 +27,14 @@ public class LoggingFilter implements GlobalFilter, Ordered {
         String requestId = UUID.randomUUID().toString();
 
         ServerHttpRequest mutatedRequest = request.mutate()
-                .header("X-Request-Id", requestId)
+                .header(CommonConstant.X_REQUEST_ID_HEADER, requestId)
                 .build();
 
         ServerWebExchange mutatedExchange = exchange.mutate()
                 .request(mutatedRequest)
                 .build();
 
-        log.info("""
-                        Request Details:
-                        requestId = {}
-                        method = {}
-                        path = {}
-                        headers = {}
-                        clientIp = {}
-                        """,
+        log.info(REQUEST_DETAILS_FORMAT_LOG,
                 requestId,
                 request.getMethod(),
                 request.getPath(),
@@ -52,9 +47,9 @@ public class LoggingFilter implements GlobalFilter, Ordered {
 
         return chain.filter(mutatedExchange)
                 .doOnSuccess(response -> logResponse(mutatedExchange.getResponse(), requestId, startTime))
-                .doOnError(error -> log.error("Error processing request: {}", error.getMessage()))
+                .doOnError(error -> log.error(ERROR_PROCESSING_REQUEST_LOG, error.getMessage()))
                 .onErrorResume(error -> {
-                    log.error("Request failed: {}", error.getMessage());
+                    log.error(REQUEST_FAILED_LOG, error.getMessage());
                     return Mono.error(error);
                 });
     }
@@ -62,27 +57,22 @@ public class LoggingFilter implements GlobalFilter, Ordered {
     private void logResponse(ServerHttpResponse response, String requestId, long startTime) {
         long duration = System.currentTimeMillis() - startTime;
 
-        log.info("""
-                        Response Details:
-                        requestId = {}
-                        statusCode = {}
-                        duration = {} ms
-                        """,
+        log.info(RESPONSE_DETAILS_FORMAT_LOG,
                 requestId,
                 response.getStatusCode(),
                 duration
         );
         try {
-            response.getHeaders().add("X-Response-Time", duration + "ms");
-            response.getHeaders().add("X-Request-Id", requestId);
+            response.getHeaders().add(X_RESPONSE_TIME_HEADER, duration + MILLISECONDS);
+            response.getHeaders().add(CommonConstant.X_REQUEST_ID_HEADER, requestId);
         } catch (UnsupportedOperationException e) {
-            log.debug("Cannot modify response headers - response already committed");
+            log.debug(CANNOT_MODIFY_RESPONSE_HEADERS_RESPONSE_ALREADY_COMMITTED_LOG);
         }
     }
 
     @Override
     public int getOrder() {
-        return Ordered.HIGHEST_PRECEDENCE + 2;
+        return Ordered.HIGHEST_PRECEDENCE + SECOND_PLACE;
     }
 
 }
