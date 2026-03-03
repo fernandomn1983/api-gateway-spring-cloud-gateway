@@ -29,38 +29,28 @@ spring:
             - Path=/auth/**
           filters:
             - StripPrefix=0
-        - id: posts-services
-          uri: https://jsonplaceholder.typicode.com
+
+        - id: contract-services
+          uri: http://localhost:8440
           predicates:
-            - Path=/api/posts/**
+            - Path=/api/contracts, /api/contracts/**
           filters:
-            - RewritePath=/api/posts(?<segment>/?.*), /posts/$\{segment}
+            - RewritePath=/api/contracts/?(?<segment>.*), /v1/contract-services/contracts/$\{segment}
             - name: CircuitBreaker
               args:
-                name: externalService
-                fallbackUri: forward:/fallback/external
-        - id: users-services
-          uri: https://jsonplaceholder.typicode.com
-          predicates:
-            - Path=/api/users/**
-            - Method=GET
-          filters:
-            - RewritePath=/api/users(?<segment>/?.*), /users/$\{segment}
-            - name: CircuitBreaker
+                name: contractService
+                fallbackUri: forward:/fallback/contracts
+            - name: PreserveHostHeader
               args:
-                name: externalService
-                fallbackUri: forward:/fallback/external
-        - id: external-fallback
-          uri: forward:/fallback/external
+                enabled: false
+
+        - id: contracts-fallback
+          uri: forward:/fallback/contracts
           predicates:
-            - Path=/fallback/external/**
+            - Path=/fallback/contracts/**
           filters:
             - SetStatus=503
             - AddResponseHeader=X-Fallback, "true"
-      discovery:
-        locator:
-          enabled: true
-          lower-case-service-id: true
   data:
     redis:
       host: localhost
@@ -91,15 +81,9 @@ management:
     sampling:
       probability: 1.0
 
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
-    register-with-eureka: true
-    fetch-registry: true
-
 logging:
   level:
-    com.nurtricenter.apigateway: DEBUG
-    org.springframework.cloud.gateway: DEBUG
-    org.springframework.security: DEBUG
+    com.nurtricenter.apigateway: INFO
+    org.springframework.cloud.gateway: INFO
+    org.springframework.security: INFO
+    org.springframework.http.server.reactive: INFO
