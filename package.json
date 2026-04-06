@@ -1,0 +1,29 @@
+{
+	"name": "api-gateway",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"prepare": "husky install"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/fernandomn1983/api-gateway-spring-cloud-gateway.git"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/fernandomn1983/api-gateway-spring-cloud-gateway/issues"
+	},
+	"homepage": "https://github.com/fernandomn1983/api-gateway-spring-cloud-gateway#readme",
+	"devDependencies": {
+		"editorconfig-checker": "^6.1.1",
+		"husky": "^9.1.7",
+		"lint-staged": "^16.3.3"
+	},
+	"lint-staged": {
+		"*": "editorconfig-checker -exclude node_modules,target,.git"
+	}
+}
