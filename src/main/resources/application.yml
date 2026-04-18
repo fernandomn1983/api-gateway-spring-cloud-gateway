@@ -1,89 +1,123 @@
 server:
-  port: 9000
+    port: 9000
 
 security:
-  cors-allowed-origins:
-    - "http://localhost:9000"
-    - "https://127.0.0.1:3000"
-  public-list:
-    - "/auth/**"
-    - "/public/**"
-    - "/actuator/health"
-    - "/actuator/info"
-    - "/fallback/**"
+    cors-allowed-origins:
+        - "http://localhost:9000"
+        - "https://127.0.0.1:3000"
+    public-list:
+        - "/auth/**"
+        - "/public/**"
+        - "/actuator/health"
+        - "/actuator/info"
+        - "/fallback/**"
 
 spring:
-  application:
-    name: api-gateway
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          secret: mySuperSecretKeyForJwtGenerationThatIsAtLeast32CharactersLong!
-  cloud:
-    gateway:
-      routes:
-        - id: auth-service
-          uri: http://localhost:9000
-          predicates:
-            - Path=/auth/**
-          filters:
-            - StripPrefix=0
+    application:
+        name: api-gateway
+    security:
+        oauth2:
+            resourceserver:
+                jwt:
+                    secret: mySuperSecretKeyForJwtGenerationThatIsAtLeast32CharactersLong!
+    cloud:
+        gateway:
+            routes:
+                -   id: auth-service
+                    uri: lb://auth-service
+                    predicates:
+                        - Path=/auth/**
+                    filters:
+                        - StripPrefix=0
+                        -   name: CircuitBreaker
+                            args:
+                                name: authService
+                                fallbackUri: forward:/fallback/auth
 
-        - id: contract-services
-          uri: http://localhost:8440
-          predicates:
-            - Path=/api/contracts, /api/contracts/**
-          filters:
-            - RewritePath=/api/contracts/?(?<segment>.*), /v1/contract-services/contracts/$\{segment}
-            - name: CircuitBreaker
-              args:
-                name: contractService
-                fallbackUri: forward:/fallback/contracts
-            - name: PreserveHostHeader
-              args:
-                enabled: false
+                -   id: contract-services
+                    uri: lb://contract-services
+                    predicates:
+                        - Path=/api/contracts, /api/contracts/**
+                    filters:
+                        - RewritePath=/api/contracts/?(?<segment>.*), /v1/contract-services/contracts/$\{segment}
+                        -   name: CircuitBreaker
+                            args:
+                                name: contractService
+                                fallbackUri: forward:/fallback/contracts
+                        -   name: PreserveHostHeader
+                            args:
+                                enabled: false
 
-        - id: contracts-fallback
-          uri: forward:/fallback/contracts
-          predicates:
-            - Path=/fallback/contracts/**
-          filters:
-            - SetStatus=503
-            - AddResponseHeader=X-Fallback, "true"
-  data:
-    redis:
-      host: localhost
-      port: 6379
-      timeout: 2000ms
+                -   id: auth-fallback
+                    uri: forward:/fallback/auth
+                    predicates:
+                        - Path=/fallback/auth/**
+                    filters:
+                        - SetStatus=503
+                        - AddResponseHeader=X-Fallback, "true"
+
+                -   id: contracts-fallback
+                    uri: forward:/fallback/contracts
+                    predicates:
+                        - Path=/fallback/contracts/**
+                    filters:
+                        - SetStatus=503
+                        - AddResponseHeader=X-Fallback, "true"
+
+    data:
+        redis:
+            host: localhost
+            port: 6379
+            timeout: 2000ms
 
 jwt:
-  secret: mySuperSecretKeyForJwtGenerationThatIsAtLeast32CharactersLong!
-  expiration: 86400000
+    secret: mySuperSecretKeyForJwtGenerationThatIsAtLeast32CharactersLong!
+    expiration: 86400000
 
 management:
-  endpoints:
-    web:
-      exposure:
-        include: "*"
-  endpoint:
-    gateway:
-      enabled: true
-    health:
-      show-details: always
-  server:
-    port: 9000
-  prometheus:
-    metrics:
-      export:
-        enabled: true
-  tracing:
-    sampling:
-      probability: 1.0
+    endpoints:
+        web:
+            exposure:
+                include: "*"
+    endpoint:
+        gateway:
+            enabled: true
+        health:
+            show-details: always
+    server:
+        port: 9000
+    prometheus:
+        metrics:
+            export:
+                enabled: true
+    tracing:
+        sampling:
+            probability: 1.0
 
 logging:
-  level:
-    com.nurtricenter.apigateway: INFO
-    org.springframework.cloud.gateway: INFO
-    org.springframework.security: INFO
-    org.springframework.http.server.reactive: INFO
+    level:
+        com.nurtricenter.apigateway: INFO
+        org.springframework.cloud.gateway: INFO
+        org.springframework.security: INFO
+        org.springframework.http.server.reactive: INFO
+
+eureka:
+    client:
+        service-url:
+            defaultZone: http://localhost:8761/eureka/
+        register-with-eureka: true
+        fetch-registry: true
+    instance:
+        hostname: api-gateway
+        prefer-ip-address: false
+        instance-id: ${spring.application.name}:${random.value}
+
+resilience4j:
+    circuitbreaker:
+        instances:
+            contractService:
+                slidingWindowSize: 10
+    timelimiter:
+        instances:
+            contractService:
+                timeoutDuration: 5s
