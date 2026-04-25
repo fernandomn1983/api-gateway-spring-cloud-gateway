@@ -48,33 +48,33 @@ spring:
                             args:
                                 enabled: false
 
-#                -   id: nutritional-services
-#                    uri: lb://nutritional-services
-#                    predicates:
-#                      - Path=/api/nutritional, /api/nutritional/** #TODO:
-#                    filters:
-#                      - RewritePath=/api/nutritional/?(?<segment>.*), /v1/nutritional-services/nutritional/$\{segment} #TODO:
-#                      -   name: CircuitBreaker
-#                          args:
-#                            name: nutritionalService
-#                            fallbackUri: forward:/fallback/nutritional
-#                      -   name: PreserveHostHeader
-#                          args:
-#                            enabled: false
-#
-#                -   id: production-services
-#                    uri: lb://production-services
-#                    predicates:
-#                      - Path=/api/production, /api/production/** #TODO:
-#                    filters:
-#                      - RewritePath=/api/production/?(?<segment>.*), /v1/production-services/production/$\{segment} #TODO:
-#                      -   name: CircuitBreaker
-#                          args:
-#                            name: productionService
-#                            fallbackUri: forward:/fallback/production
-#                      -   name: PreserveHostHeader
-#                          args:
-#                            enabled: false
+                -   id: advice-services
+                    uri: lb://advice-services
+                    predicates:
+                      - Path=/api/advice, /api/advice/**
+                    filters:
+                      - RewritePath=/api/advice/?(?<segment>.*), /api/advice/$\{segment}
+                      -   name: CircuitBreaker
+                          args:
+                            name: adviceService
+                            fallbackUri: forward:/fallback/advice
+                      -   name: PreserveHostHeader
+                          args:
+                            enabled: false
+
+                -   id: delivery-services
+                    uri: lb://delivery-services
+                    predicates:
+                      - Path=/api/delivery, /api/delivery/**
+                    filters:
+                      - RewritePath=/api/delivery/?(?<segment>.*), /delivery/$\{segment}
+                      -   name: CircuitBreaker
+                          args:
+                            name: deliveryService
+                            fallbackUri: forward:/fallback/delivery
+                      -   name: PreserveHostHeader
+                          args:
+                            enabled: false
 
                 -   id: auth-fallback
                     uri: forward:/fallback/auth
@@ -92,21 +92,21 @@ spring:
                         - SetStatus=503
                         - AddResponseHeader=X-Fallback, "true"
 
-#                -   id: nutritional-fallback
-#                    uri: forward:/fallback/nutritional
-#                    predicates:
-#                      - Path=/fallback/nutritional/**
-#                    filters:
-#                      - SetStatus=503
-#                      - AddResponseHeader=X-Fallback, "true"
-#
-#                -   id: production-fallback
-#                    uri: forward:/fallback/production
-#                    predicates:
-#                      - Path=/fallback/production/**
-#                    filters:
-#                      - SetStatus=503
-#                      - AddResponseHeader=X-Fallback, "true"
+                -   id: advice-fallback
+                    uri: forward:/fallback/advice
+                    predicates:
+                      - Path=/fallback/advice/**
+                    filters:
+                      - SetStatus=503
+                      - AddResponseHeader=X-Fallback, "true"
+
+                -   id: delivery-fallback
+                    uri: forward:/fallback/delivery
+                    predicates:
+                      - Path=/fallback/delivery/**
+                    filters:
+                      - SetStatus=503
+                      - AddResponseHeader=X-Fallback, "true"
 
     data:
         redis:
